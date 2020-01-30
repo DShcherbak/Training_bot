@@ -2,58 +2,16 @@ import telebot
 import json
 from User import *
 from Exercise import *
+from admin_bot import admin_bot
 
 
 bot = telebot.TeleBot('1054698181:AAEmAqgJ_pc6P7Hbd6XWN2Bb-MJzxS4os1U')
-admin_bot = telebot.TeleBot('1054698181:AAEmAqgJ_pc6P7Hbd6XWN2Bb-MJzxS4os1U')
 user_database = "user_database.json"
 exercise_database = "exercise_database.json"
 url_training = ""
 users = {}
 exercises = []
-number_exercises = 0
 admin_id = "378669057"
-
-
-@admin_bot.message_handler(commands=['reload'])
-def reload(message):
-    if str(message.from_user.id) == admin_id:
-        read_from_database()
-        admin_bot.send_message(message.from_user.id, "You don't have admin rights")
-    else:
-        admin_bot.send_message(message.from_user.id, "You don't have admin rights")
-
-
-@admin_bot.message_handler(commands=['new_exercise'])
-def new_exercise(message):
-    if str(message.from_user.id) == admin_id:
-        read_from_database()
-        bot.send_message(message.from_user.id, 'Название упражнения: ')
-        bot.register_next_step_handler(message, get_exercise_name)
-    else:
-        admin_bot.send_message(message.from_user.id, "You don't have admin rights")
-
-
-def get_exercise_name(message):
-    bot.send_message(message.from_user.id, "Класне ім'я! А як мені найкраще до вас звертатися?")
-    global users
-    user_id = message.from_user.id
-    users[user_id] = User()
-    users[user_id].full_name = message.text
-    users[user_id].id = user_id
-    save_users()
-    bot.register_next_step_handler(message, get_nick)
-
-
-def get_nick(message):
-    bot.send_message(message.from_user.id, "Я запам'ятаю :)\nОчікуйте план занять незабаром")
-    global users
-    user_id = message.from_user.id
-    users[user_id].nickname = message.text
-    save_users()
-#    bot.register_next_step_handler(message, get_nick)
-
-
 
 def read_from_database():
     global users, exercises, number_exercises
@@ -79,6 +37,15 @@ def save_users():
         encoded_users.append(users[user].encode_to_json())
     with open(user_database, "w") as write_file:
         json.dump(encoded_users, write_file)
+
+
+def save_exercises():
+    global exercises
+    encoded_exercises = []
+    for exercise in exercises:
+        encoded_exercises.append(exercise.encode_to_json())
+    with open(exercise_database, "w") as write_file:
+        json.dump(encoded_exercises, write_file)
 
 
 @bot.message_handler(commands=['start'])
