@@ -1,13 +1,15 @@
 class ExercisePattern:
     id = -1
     link = ""
+    desc = ""
 
     def encode_to_json(self):
-        return {"id": {0: self.id}, "link": {0: self.link}}
+        return {"id": {0: self.id}, "link": {0: self.link}, "desc": {0: self.desc}}
 
     def decode_from_json(self, json_group):
         self.id = int(json_group["id"]["0"])
         self.link = json_group["link"]["0"]
+        self.desc = json_group["desc"]["0"]
 
 
 class Exercise:
@@ -29,6 +31,9 @@ class Exercise:
 
     def set_temp(self, _temp):
         self.temp = _temp
+
+    def to_message(self):
+        return str(self.id) + "\n"
 
 
 class Training:
