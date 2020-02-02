@@ -38,7 +38,6 @@ def save_users():
 def save_exercises():
     global exercises
     encoded_exercises = []
-    exercise_database.clear()
     for exercise in exercises:
         encoded_exercises.append(exercise.encode_to_json())
     with open(exercise_database, "w") as write_file:
@@ -68,6 +67,17 @@ def new_exercise(message):
         admin_bot.send_message(message.from_user.id, "You don't have admin rights")
 
 
+@admin_bot.message_handler(content_types=['document'])
+def get_text_messages(message):
+    print(message.document.file_id)
+    admin_bot.send_message(message.from_user.id, "hello")
+    file_info = admin_bot.get_file(message.document.file_id)
+    downloaded_file = admin_bot.download_file(file_info.file_path)
+
+    with open('user_database.json', 'wb') as new_file:
+        new_file.write(downloaded_file)
+    print("hello")
+
 
 def get_exercise_name(message):
     admin_bot.send_message(message.from_user.id, "Описание упражнения: ")
@@ -96,6 +106,4 @@ def get_link(message):
     save_exercises()
     admin_bot.send_message(message.from_user.id, exercises[id].to_message())
 
-
-#    https://www.youtube.com/watch?v=M2ywMTCmAgw
 
