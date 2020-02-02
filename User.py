@@ -8,26 +8,26 @@ class User:
     trainings = []
 
     def encode_to_json(self):
-        encoded_trainings = {}
+        encoded_trainings = []
         i = 0
         for train in self.trainings:
             encoded_train = train.encode_to_json()
-            encoded_trainings.update([{i,encoded_train}])
-        return {"id": {0: self.id}, "current_training": {0: self.current_training},
-                "current_exercise": {0: self.current_exercise}, "full_name": {0: self.full_name},
-                "nickname": {0: self.nickname}, "trainings": encoded_trainings}
+            encoded_trainings.append(encoded_train)
+        return {"id": str(self.id), "current_training":  str(self.current_training),
+                "current_exercise": str(self.current_exercise), "full_name": self.full_name,
+                "nickname": self.nickname, "trainings": encoded_trainings}
 
     def decode_from_json(self, json_group):
-        self.id = int(json_group["id"]["0"])
-        self.current_training = int(json_group["current_training"]["0"])
-        self.full_name = json_group["full_name"]["0"]
-        self.nickname = json_group["nickname"]["0"]
+        self.id = int(json_group["id"])
+        self.current_training = int(json_group["current_training"])
+        self.full_name = json_group["full_name"]
+        self.nickname = json_group["nickname"]
         encoded_trainings = json_group["trainings"]
         for encoded_train in encoded_trainings:
             new_train = Training()
             new_train.decode_from_json(encoded_train)
             self.trainings.append(new_train)
-        self.trainings = list(json_group["trainings"])
+        self.trainings = encoded_trainings
 
     def get_exercise(self):
         if self.current_exercise >= len(self.trainings):

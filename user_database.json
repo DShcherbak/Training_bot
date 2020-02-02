@@ -1,1 +1,26 @@
-[{"id": {"0": 378669057}, "current_training": {"0": 0}, "current_exercise": {"0": 0}, "full_name": {"0": "Dent"}, "nickname": {"0": "Den"}, "trainings": {}}, {"id": {"0": 371329889}, "current_training": {"0": 0}, "current_exercise": {"0": 0}, "full_name": {"0": "Ivan"}, "nickname": {"0": "Den loh"}, "trainings": {}}]
+[
+  {
+    "id": "378669057",
+    "current_training": "0",
+    "current_exercise": "0",
+    "full_name": "Dent",
+    "nickname": "Den",
+    "trainings": []
+  },
+  {
+    "id": "371329889",
+    "current_training": "0",
+    "current_exercise": "0",
+    "full_name": "Ivan",
+    "nickname": "Den loh",
+    "trainings": []
+  },
+  {
+    "id": "256760221",
+    "current_training": "0",
+    "current_exercise": "0",
+    "full_name": "Eliabeth",
+    "nickname": "Liza",
+    "trainings": []
+  }
+]

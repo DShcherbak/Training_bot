@@ -20,6 +20,9 @@ def read_from_database():
     for encoded_user in encoded_users:
         user = User()
         user.decode_from_json(encoded_user)
+        if user.id in users.keys():
+            user.current_training = users[user.id].current_training
+            user.current_exercise = users[user.id].current_exercise
         users.update([{user.id, user}])
     with open(exercise_database, "r") as read_file:
         encoded_exercises = json.load(read_file)
