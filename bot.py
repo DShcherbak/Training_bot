@@ -88,6 +88,12 @@ def get_nick(message):
 def send_hello(message):
     global users
     user_id = message.from_user.id
+    if not user_id in users.keys():
+        bot.send_message(user_id, "Будь ласка, напишіть /start")
+        return
+    if users[user_id].finished():
+        bot.send_message(user_id, 'Це було останнє тренування! Вітаю!')
+        return
     pre_training = 'Починаємо тренування!\n Не забудь зробити розминку, щоб уникнути травм! Приклад розминки:'
     pre_training += url_training
     keyboard = telebot.types.InlineKeyboardMarkup()
@@ -98,19 +104,25 @@ def send_hello(message):
     bot.send_message(user_id, text=pre_training, reply_markup=keyboard)
 
 
+#TODO: Check if not sleeping every 15 minutes
 @bot.callback_query_handler(func=lambda call: True)
 def next_exercise(call):
     global users
     user_id = call.from_user.id
+    user = users[user_id]
     bot.delete_message(call.from_user.id, call.message.message_id)
     if call.data == 'cancel':
         bot.send_message(user_id, 'Добре, займаємось іншим разом')
+    elif user.finished():
+        bot.send_message(user_id, 'Це було останнє тренування! Вітаю!')
     else:
-        user = users[user_id]
         description = user.get_exercise()
+        user.current_exercise += 1
         keyboard = telebot.types.InlineKeyboardMarkup()
         if description[0:2] == "Це":
-            pass
+            user.current_exercise = 0
+            user.current_training += 1
+            save_users()
         else:
             key_next = telebot.types.InlineKeyboardButton(text='Наступна вправа', callback_data='next')
             key_cancel = telebot.types.InlineKeyboardButton(text='Припинити тренування', callback_data='cancel')
@@ -119,5 +131,5 @@ def next_exercise(call):
         bot.send_message(user_id, text=description, reply_markup=keyboard)
 
 
-admin_bot.polling(none_stop=True, interval=0)
+#admin_bot.polling(none_stop=True, interval=0)
 bot.polling(none_stop=True, interval=0)

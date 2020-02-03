@@ -27,10 +27,13 @@ class User:
             new_train = Training()
             new_train.decode_from_json(encoded_train)
             self.trainings.append(new_train)
-        self.trainings = encoded_trainings
+
+    def finished(self):
+        return self.current_training >= len(self.trainings)
 
     def get_exercise(self):
-        if self.current_exercise >= len(self.trainings):
+        if self.current_exercise >= len(self.trainings[self.current_training].exercises):
             return "Це була остання вправа, можна відпочивати!"
         else:
-            return "Вправа номер " + str(self.current_training) + self.trainings[self.current_training].to_message()
+            print (self.trainings[self.current_training].exercises)
+            return "Вправа номер " + str(self.current_training) + self.trainings[self.current_training].exercises[self.current_exercise].to_message()

@@ -28,13 +28,12 @@ class Exercise:
     repeat = 0
     temp = ""
 
-    def __init__(self):
-        pass
+    def __init__(self, pattern=None):
+        if not pattern == None:
+            self.name = pattern.name
+            self.link = pattern.link
+            self.desc = pattern.desc
 
-    def __init__(self, pattern):
-        self.name = pattern.name
-        self.link = pattern.link
-        self.desc = pattern.desc
 
     def set_repeat(self, _repeat):
         self.repeat = _repeat
@@ -66,21 +65,29 @@ class Exercise:
 class Training:
     started = False
     finished = False
-    exes = []  # list of exercises
+    exercises = []  # list of exercises
+
+    def __init__(self):
+        self.started = False
+        self.finished = False
+        self.exercises = []  # list of exercises
 
     def encode_to_json(self):
         finish_code = self.started*1 + self.finished*1
         encoded_exes = []
-        for ex in self.exes:
-            encoded_exes.append(ex.encode_to_json())
-        return {"finish_code": str(finish_code), "exes" : encoded_exes}
+        for ex in self.exercises:
+            new_ex = ex.encode_to_json()
+            encoded_exes.append(new_ex)
+        return {"finish_code": str(finish_code), "exercises" : encoded_exes}
 
     def decode_from_json(self, json_group):
         finish_state = int(json_group["finish_code"])
         self.started = finish_state > 0
         self.finished = finish_state > 1
-        encoded_exes = json_group["exes"]
+        encoded_exes = json_group["exercises"]
+        print("Encoding", len(json_group["exercises"]))
         for encoded_ex in encoded_exes:
             new_ex = Exercise()
             new_ex.decode_from_json(encoded_ex)
-            self.exes.append(new_ex)
+            self.exercises.append(new_ex)
+        print("Encoding", len(self.exercises))

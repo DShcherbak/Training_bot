@@ -1,18 +1,63 @@
 [
   {
     "id": "378669057",
-    "current_training": "0",
+    "current_training": "2",
     "current_exercise": "0",
     "full_name": "Dent",
     "nickname": "Den",
-    "trainings": []
-  },
-  {
-    "id": "371329889",
-    "current_training": "0",
-    "current_exercise": "0",
-    "full_name": "Ivan",
-    "nickname": "Den loh",
-    "trainings": []
+    "trainings": [
+      {
+        "finish_code": "0",
+        "exercises": [
+          {
+            "name": "mama",
+            "link": "no",
+            "desc": "No",
+            "repeat": "5",
+            "temp": "Middle"
+          },
+          {
+            "name": "papa",
+            "link": "no",
+            "desc": "No",
+            "repeat": "5",
+            "temp": "Middle"
+          },
+          {
+            "name": "haha",
+            "link": "no",
+            "desc": "No",
+            "repeat": "5",
+            "temp": "Middle"
+          }
+        ]
+      },
+      {
+        "finish_code": "0",
+        "exercises": [
+          {
+            "name": "mama",
+            "link": "no",
+            "desc": "No",
+            "repeat": "5",
+            "temp": "Middle"
+          },
+          {
+            "name": "papa",
+            "link": "no",
+            "desc": "No",
+            "repeat": "5",
+            "temp": "Middle"
+          },
+          {
+            "name": "haha",
+            "link": "no",
+            "desc": "No",
+            "repeat": "5",
+            "temp": "Middle"
+          }
+        ]
+      }
+    ]
   }
 ]

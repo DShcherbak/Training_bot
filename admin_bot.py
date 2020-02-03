@@ -74,9 +74,10 @@ def get_text_messages(message):
     file_info = admin_bot.get_file(message.document.file_id)
     downloaded_file = admin_bot.download_file(file_info.file_path)
 
-    with open('user_database.json', 'wb') as new_file:
+    with open('uploaded_database.json', 'wb') as new_file:
         new_file.write(downloaded_file)
-    print("hello")
+    #TODO: Merge uploaded and current database
+
 
 
 def get_exercise_name(message):
