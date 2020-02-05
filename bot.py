@@ -33,6 +33,26 @@ def read_from_database():
     number_exercises = len(exercises)
 
 
+def merge_JSON(old_JSON, new_JSON):
+    global users
+    with open(old_JSON, "r") as read_file:
+        encoded_users = json.load(read_file)
+    for encoded_user in encoded_users:
+        user = User()
+        user.decode_from_json(encoded_user)
+        users.update([{user.id, user}])
+    with open(new_JSON, "r") as read_file:
+        encoded_users = json.load(read_file)
+    for encoded_user in encoded_users:
+        user_id = int(encoded_user["id"])
+        if(int(encoded_user["id"]) in users.keys()):
+            for tr in range(16):
+                for ex in range(encoded_user["train|" + str(tr) + "|size"]):
+                    users[user_id].trainings[tr].exercises[ex].name = encoded_user["train|" + str(tr) + "|ex|" + str(ex) + "|name"]
+                    users[user_id].trainings[tr].exercises[ex].repeat = int(encoded_user["train|" + str(tr) + "|ex|" + str(ex) + "|repeat"])
+                    users[user_id].trainings[tr].exercises[ex].temp = encoded_user["train|" + str(tr) + "|ex|" + str(ex) + "|temp"]
+
+
 def save_users():
     global users
     encoded_users = []
