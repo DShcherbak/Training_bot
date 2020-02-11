@@ -3,6 +3,7 @@ class ExercisePattern:
     link = ""
     desc = ""
 
+
     def encode_to_json(self):
         return {"name" : self.name, "link": self.link, "desc": self.desc}
 
@@ -85,9 +86,7 @@ class Training:
         self.started = finish_state > 0
         self.finished = finish_state > 1
         encoded_exes = json_group["exercises"]
-        print("Encoding", len(json_group["exercises"]))
         for encoded_ex in encoded_exes:
             new_ex = Exercise()
             new_ex.decode_from_json(encoded_ex)
             self.exercises.append(new_ex)
-        print("Encoding", len(self.exercises))
