@@ -1,18 +1,21 @@
 import telebot
 import time
 import multiprocessing
+import config
 import json
 from User import *
 from Exercise import *
 
 
-bot = telebot.TeleBot('1054698181:AAEmAqgJ_pc6P7Hbd6XWN2Bb-MJzxS4os1U',threaded=False)
-user_database = "user_database.json"
-exercise_database = "exercise_database.json"
+TWODAYS = 48 * 60 * 60
+FIFTEEN = 15*60
+bot = telebot.TeleBot(config.token,threaded=False)
+user_database = config.user_database
+exercise_database = config.exercise_database
 url_training = ""
 users = {}
 exercises = {}
-admin_id = "378669057"
+admin_id = config.admin_id
 
 def read_from_database():
     global users, exercises, number_exercises
@@ -131,7 +134,6 @@ def send_hello(message):
     bot.send_message(user_id, text=pre_training, reply_markup=keyboard)
 
 
-#TODO: Check if not sleeping every 15 minutes
 @bot.callback_query_handler(func=lambda call: call.data[0] == '.')
 def next_exercise(call):
     global users
@@ -140,6 +142,7 @@ def next_exercise(call):
     bot.delete_message(call.from_user.id, call.message.message_id)
     if call.data == '.cancel':
         bot.send_message(user_id, 'Добре, займаємось іншим разом')
+        user.check_time = time.time() + TWODAYS
     elif user.finished():
         bot.send_message(user_id, 'Це було останнє тренування! Вітаю!')
     else:
@@ -161,10 +164,11 @@ def next_exercise(call):
 def how_are_you():
     global users
     while True:
-        time.sleep(10) # 15*60
+        time.sleep(1) # 15*60
         for user_key in users:
             user = users[user_key]
-            if user.check_time:
+            if user.timeout():
+                user.check_time += 5
                 if user.status == "Sleeping":
                     bot.send_message(user.id, user.nickname + ", час позайматися після такої перерви!")
                     bot.send_message(admin_id, "Користувач " + user.full_name + "(" + user.nickname + ")" +
@@ -205,8 +209,15 @@ def next_exercise(call):
 
 
 if __name__ == "__main__":
-    bot_polling = multiprocessing.Process(target=bot.polling, args=(True,))
-    server_check = multiprocessing.Process(target=how_are_you)
-    bot_polling.start()
-    server_check.start()
+    read_from_database()
+    for user_key in users:
+        user = users[user_key]
+        user.status = "Sleeping"
+        user.check_time = time.time()
+    save_users()
+    how_are_you()
+   # bot_polling = multiprocessing.Process(target=bot.polling, args=(True,))
+   # server_check = multiprocessing.Process(target=how_are_you)
+   # bot_polling.start()
+   # server_check.start()
 
