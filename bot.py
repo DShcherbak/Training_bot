@@ -1,6 +1,6 @@
 import telebot
 import multiprocessing
-import config
+from git_ignore import config
 import json
 import talking
 from User import *
@@ -9,7 +9,7 @@ from Exercise import *
 
 TWODAYS = 48 * 60 * 60
 FIFTEEN = 15*60
-bot = telebot.TeleBot(config.token,threaded=False)
+bot = telebot.TeleBot(config.token, threaded=False)
 user_database = config.user_database
 exercise_database = config.exercise_database
 url_training = ""

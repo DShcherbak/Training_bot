@@ -1,7 +1,7 @@
-/config.py
+/git_ignore/config.py
 /.idea
-/user_database.json
-/exercise_database.json
-/admin_bot.py
-/uploaded_database.json
+/git_ignore/user_database.json
+/git_ignore/exercise_database.json
+/git_ignore/admin_bot.py
+/git_ignore/uploaded_database.json
 /talking.py
