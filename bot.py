@@ -1,8 +1,8 @@
 import telebot
-import time
 import multiprocessing
 import config
 import json
+import talking
 from User import *
 from Exercise import *
 
@@ -87,15 +87,14 @@ def send_hello(message):
     read_from_database()
     user_id = message.from_user.id
     if user_id in users:
-        bot.send_message(user_id, 'Радий знову вас чути!')
+        bot.send_message(user_id, talking.greetings)
     else:
-        bot.send_message(message.from_user.id, 'Привіт, дякую що написали! Мене звати Kachalka Bot, радий знайомству!')
-        bot.send_message(message.from_user.id, 'Як вас звати?')
+        bot.send_message(message.from_user.id, talking.first_hello)
         bot.register_next_step_handler(message, get_name)
 
 
 def get_name(message):
-    bot.send_message(message.from_user.id, "Класне ім'я! А як мені найкраще до вас звертатися?")
+    bot.send_message(message.from_user.id, talking.nickname)
     global users
     user_id = message.from_user.id
     users[user_id] = User()
@@ -106,10 +105,11 @@ def get_name(message):
 
 
 def get_nick(message):
-    bot.send_message(message.from_user.id, "Я запам'ятаю :)\nОчікуйте план занять незабаром")
+    bot.send_message(message.from_user.id, talking.see_you)
     global users
     user_id = message.from_user.id
     users[user_id].nickname = message.text
+    users[user_id].trainings = []
     save_users()
 #    bot.register_next_step_handler(message, get_nick)
 
@@ -119,19 +119,19 @@ def send_hello(message):
     global users
     user_id = message.from_user.id
     if not user_id in users.keys():
-        bot.send_message(user_id, "Будь ласка, напишіть /start")
+        bot.send_message(user_id, talking.ask_start)
         return
     if users[user_id].finished():
-        bot.send_message(user_id, 'Це було останнє тренування! Вітаю!')
+        bot.send_message(user_id, talking.last_train)
         return
-    pre_training = 'Починаємо тренування!\n Не забудь зробити розминку, щоб уникнути травм! Приклад розминки:'
+    pre_training = talking.start_training
     pre_training += url_training
     keyboard = telebot.types.InlineKeyboardMarkup()
     key_go = telebot.types.InlineKeyboardButton(text = 'Почати тренування', callback_data='.go')
     key_cancel = telebot.types.InlineKeyboardButton(text='Скасувати тренування', callback_data='.cancel')
     keyboard.add(key_go)
     keyboard.add(key_cancel)
-    bot.send_message(user_id, text=pre_training, reply_markup=keyboard)
+    bot.send_message(user_id, text=talking.pre_training + url_training, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '.')
@@ -212,12 +212,12 @@ if __name__ == "__main__":
     read_from_database()
     for user_key in users:
         user = users[user_key]
-        user.status = "Sleeping"
-        user.check_time = time.time()
-    save_users()
-    how_are_you()
-   # bot_polling = multiprocessing.Process(target=bot.polling, args=(True,))
+      #  user.status = "Sleeping"
+       # user.check_time = time.time()
+#    save_users()
+   # how_are_you()
+    bot_polling = multiprocessing.Process(target=bot.polling, args=(True,))
    # server_check = multiprocessing.Process(target=how_are_you)
-   # bot_polling.start()
+    bot_polling.start()
    # server_check.start()
 

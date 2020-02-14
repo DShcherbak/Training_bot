@@ -2,3 +2,6 @@
 /.idea
 /user_database.json
 /exercise_database.json
+/admin_bot.py
+/uploaded_database.json
+/talking.py
