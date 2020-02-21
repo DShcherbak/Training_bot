@@ -1,14 +1,14 @@
 import telebot
 import multiprocessing
-from git_ignore import config
 import json
-import talking
 from User import *
 from Exercise import *
 
+# DONE:
+# TODO: Fix merging user libraries
 
-TWODAYS = 48 * 60 * 60
-FIFTEEN = 15*60
+
+FIFTEEN = 15 * 60
 bot = telebot.TeleBot(config.token, threaded=False)
 user_database = config.user_database
 exercise_database = config.exercise_database
@@ -111,7 +111,6 @@ def get_nick(message):
     users[user_id].nickname = message.text
     users[user_id].trainings = []
     save_users()
-#    bot.register_next_step_handler(message, get_nick)
 
 
 @bot.message_handler(commands=['train'])
@@ -124,14 +123,14 @@ def send_hello(message):
     if users[user_id].finished():
         bot.send_message(user_id, talking.last_train)
         return
-    pre_training = talking.start_training
+    pre_training = talking.start_train
     pre_training += url_training
     keyboard = telebot.types.InlineKeyboardMarkup()
-    key_go = telebot.types.InlineKeyboardButton(text = 'Почати тренування', callback_data='.go')
-    key_cancel = telebot.types.InlineKeyboardButton(text='Скасувати тренування', callback_data='.cancel')
+    key_go = telebot.types.InlineKeyboardButton(text = talking.button_start, callback_data='.go')
+    key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
     keyboard.add(key_go)
     keyboard.add(key_cancel)
-    bot.send_message(user_id, text=talking.pre_training + url_training, reply_markup=keyboard)
+    bot.send_message(user_id, text=pre_training + url_training, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '.')
@@ -141,46 +140,52 @@ def next_exercise(call):
     user = users[user_id]
     bot.delete_message(call.from_user.id, call.message.message_id)
     if call.data == '.cancel':
-        bot.send_message(user_id, 'Добре, займаємось іншим разом')
-        user.check_time = time.time() + TWODAYS
-    elif user.finished():
-        bot.send_message(user_id, 'Це було останнє тренування! Вітаю!')
+        bot.send_message(user_id, talking.skip)
+        user.let_go()
     else:
         description = user.get_exercise()
-        user.current_exercise += 1
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        if description[0:2] == "Це":
+        if description == talking.last_exercise:
             user.current_exercise = 0
             user.current_training += 1
             save_users()
         else:
-            key_next = telebot.types.InlineKeyboardButton(text='Наступна вправа', callback_data='.next')
-            key_cancel = telebot.types.InlineKeyboardButton(text='Припинити тренування', callback_data='.cancel')
-            keyboard.add(key_next)
-            keyboard.add(key_cancel)
+            user.current_exercise += 1
+        keyboard = telebot.types.InlineKeyboardMarkup()
+
+        key_next = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='.next')
+        key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
+        keyboard.add(key_next)
+        keyboard.add(key_cancel)
         bot.send_message(user_id, text=description, reply_markup=keyboard)
 
 
 def how_are_you():
     global users
     while True:
-        time.sleep(1) # 15*60
+        time.sleep(2*60) # 15*60
         for user_key in users:
             user = users[user_key]
             if user.timeout():
-                user.check_time += 5
-                if user.status == "Sleeping":
-                    bot.send_message(user.id, user.nickname + ", час позайматися після такої перерви!")
-                    bot.send_message(admin_id, "Користувач " + user.full_name + "(" + user.nickname + ")" +
-                                     "давно не займався!")
-                else:
-                    description = "Тренування продовжуєтсья?"
+                if not user.status == "Sleeping":
+                    bot.send_message(user.id, user.nickname + talking.go_train)
+                    bot.send_message(admin_id, "Пользователь " + user.full_name + " (" + user.nickname + ") " +
+                                     "давно не занимался!")
+                    user.check_time += 60*60*4
+                elif user.status == "Training":
+                    description = talking.continue_train
                     keyboard = telebot.types.InlineKeyboardMarkup()
-                    key_go = telebot.types.InlineKeyboardButton(text='Наступна вправа', callback_data='!next')
-                    key_cancel = telebot.types.InlineKeyboardButton(text='Припинити тренування', callback_data='!cancel')
+                    key_go = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='!next')
+                    key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='!cancel')
                     keyboard.add(key_go)
                     keyboard.add(key_cancel)
                     bot.send_message(user.id, text=description, reply_markup=keyboard)
+                    user.check_time += 60 * 30
+                    user.status = "Breaking"
+                elif user.status == "Breaking":
+                    bot.send_message(user.id, talking.skip)
+                    user.let_go()
+                    
+                    
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '!')
@@ -188,20 +193,23 @@ def next_exercise(call):
     global users
     user_id = call.from_user.id
     user = users[user_id]
+    user.status = "Training"
+    user.check_time = time.time() + FIFTEEN
     bot.delete_message(call.from_user.id, call.message.message_id)
     if call.data == '!cancel':
-        bot.send_message(user_id, 'Добре, займаємось іншим разом')
+        bot.send_message(user_id, talking.skip)
+        user.let_go()
     else:
         description = user.get_exercise()
         user.current_exercise += 1
         keyboard = telebot.types.InlineKeyboardMarkup()
-        if description[0:2] == "Це":
+        if description == talking.last_exercise:
             user.current_exercise = 0
             user.current_training += 1
             save_users()
         else:
-            key_next = telebot.types.InlineKeyboardButton(text='Наступна вправа', callback_data='.next')
-            key_cancel = telebot.types.InlineKeyboardButton(text='Припинити тренування', callback_data='.cancel')
+            key_next = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='.next')
+            key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
             keyboard.add(key_next)
             keyboard.add(key_cancel)
         bot.send_message(user_id, text=description, reply_markup=keyboard)
@@ -212,12 +220,13 @@ if __name__ == "__main__":
     read_from_database()
     for user_key in users:
         user = users[user_key]
-      #  user.status = "Sleeping"
-       # user.check_time = time.time()
-#    save_users()
-   # how_are_you()
+        if user.trainings == []:
+            user.status = "Waiting"
+        user.check_time = time.time()
+    save_users()
+    how_are_you()
     bot_polling = multiprocessing.Process(target=bot.polling, args=(True,))
-   # server_check = multiprocessing.Process(target=how_are_you)
+    server_check = multiprocessing.Process(target=how_are_you)
     bot_polling.start()
-   # server_check.start()
+    server_check.start()
 

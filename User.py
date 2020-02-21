@@ -1,4 +1,7 @@
 from Exercise import *
+
+from git_ignore import config
+import talking
 import time
 class User:
     id = -1
@@ -35,13 +38,18 @@ class User:
             self.trainings.append(new_train)
 
     def timeout(self):
-        return (self.check_time < time.time())
+        return ((not self.status == "Waiting") and self.check_time < time.time())
 
     def finished(self):
         return self.current_training >= len(self.trainings)
 
     def get_exercise(self):
         if self.current_exercise >= len(self.trainings[self.current_training].exercises):
-            return "Це була остання вправа, можна відпочивати!"
+            return talking.last_exercise
         else:
-            return "Вправа номер " + str(self.current_training) + self.trainings[self.current_training].exercises[self.current_exercise].to_message()
+            return self.trainings[self.current_training].exercises[self.current_exercise].to_message()
+
+    def let_go(self):
+        self.status = "Sleeping"
+        self.check_time = time.time() + config.TWO_DAYS
+        self.current_exercise = 1
