@@ -3,8 +3,8 @@ import multiprocessing
 import json
 from User import *
 from Exercise import *
+from git_ignore.admin_bot import *
 
-# DONE:
 # TODO: Fix merging user libraries
 
 
@@ -16,6 +16,7 @@ url_training = ""
 users = {}
 exercises = {}
 admin_id = config.admin_id
+
 
 def read_from_database():
     global users, exercises, number_exercises
@@ -52,15 +53,17 @@ def merge_JSON(old_JSON, new_JSON):
         user_id = int(encoded_user["id"])
         if (int(encoded_user["id"]) in users.keys()):
             for tr in range(2):
+                while not tr in range(len(users[user_id].trainings)):
+                    users[user_id].trainings.append(Training())
                 for ex in range(int(encoded_user["train|" + str(tr) + "|size"])):
-                    while not tr in range(len(users[user_id].trainings)):
-                        users[user_id].trainings.append(Training())
+
                     exer_mask = "train|" + str(tr) + "|exer|" + str(ex + 1) + "|"
                     if not ex in range(len(users[user_id].trainings[tr].exercises)):
-                        users[user_id].trainings[tr].exercises.append(Exercise(exercises[encoded_user[exer_mask + "name"]]))
+                        users[user_id].trainings[tr].exercises.append(
+                            Exercise(exercises[encoded_user[exer_mask + "name"]]))
                     users[user_id].trainings[tr].exercises[ex].name = encoded_user[exer_mask + "name"]
                     users[user_id].trainings[tr].exercises[ex].repeat = int(encoded_user[exer_mask + "repe"])
-                    users[user_id].trainings[tr].exercises[ex].temp = encoded_user[exer_mask +  "temp"]
+                    users[user_id].trainings[tr].exercises[ex].temp = encoded_user[exer_mask + "temp"]
 
 
 def save_users():
@@ -126,7 +129,7 @@ def send_hello(message):
     pre_training = talking.start_train
     pre_training += url_training
     keyboard = telebot.types.InlineKeyboardMarkup()
-    key_go = telebot.types.InlineKeyboardButton(text = talking.button_start, callback_data='.go')
+    key_go = telebot.types.InlineKeyboardButton(text=talking.button_start, callback_data='.go')
     key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
     keyboard.add(key_go)
     keyboard.add(key_cancel)
@@ -162,7 +165,7 @@ def next_exercise(call):
 def how_are_you():
     global users
     while True:
-        time.sleep(2*60) # 15*60
+        time.sleep(2 * 60)  # 15*60
         for user_key in users:
             user = users[user_key]
             if user.timeout():
@@ -170,7 +173,7 @@ def how_are_you():
                     bot.send_message(user.id, user.nickname + talking.go_train)
                     bot.send_message(admin_id, "Пользователь " + user.full_name + " (" + user.nickname + ") " +
                                      "давно не занимался!")
-                    user.check_time += 60*60*4
+                    user.check_time += 60 * 60 * 4
                 elif user.status == "Training":
                     description = talking.continue_train
                     keyboard = telebot.types.InlineKeyboardMarkup()
@@ -184,8 +187,6 @@ def how_are_you():
                 elif user.status == "Breaking":
                     bot.send_message(user.id, talking.skip)
                     user.let_go()
-                    
-                    
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '!')
@@ -216,17 +217,14 @@ def next_exercise(call):
 
 
 
-if __name__ == "__main__":
-    read_from_database()
-    for user_key in users:
-        user = users[user_key]
-        if user.trainings == []:
-            user.status = "Waiting"
-        user.check_time = time.time()
-    save_users()
-    how_are_you()
-    bot_polling = multiprocessing.Process(target=bot.polling, args=(True,))
-    server_check = multiprocessing.Process(target=how_are_you)
-    bot_polling.start()
-    server_check.start()
+print("Polling")
+bot_polling = multiprocessing.Process(target=bot.polling)
+#server_check = multiprocessing.Process(target=how_are_you)
+admin_polling = multiprocessing.Process(target=admin_bot.polling)
+bot_polling.start()
+print("Polling")
+bot.send_message(admin_id, "Hello, admin")
+bot.send_message(admin_id, bot.get_me().id)
+#server_check.start()
+#admin_polling.start()
 

@@ -90,3 +90,4 @@ class Training:
             new_ex = Exercise()
             new_ex.decode_from_json(encoded_ex)
             self.exercises.append(new_ex)
+
