@@ -1,9 +1,16 @@
 class ExercisePattern:
+    id = -1
     name = ""
     link = ""
     desc = ""
 
+    def __init__(self, _id, _name, _link, _desc):
+        self.id = _id
+        self.name = _name
+        self.link = _link
+        self.desc = _desc
 
+    '''
     def encode_to_json(self):
         return {"name" : self.name, "link": self.link, "desc": self.desc}
 
@@ -11,7 +18,7 @@ class ExercisePattern:
         self.name = json_group["name"]
         self.link = json_group["link"]
         self.desc = json_group["desc"]
-
+'''
     def to_message(self):
         result = ""
         result += "Упражнение: " + self.name + "\n\n"
@@ -42,6 +49,7 @@ class Exercise:
     def set_temp(self, _temp):
         self.temp = _temp
 
+    '''
     def encode_to_json(self):
         return {"name" : self.name, "link": self.link, "desc": self.desc,
                 "repeat": str(self.repeat), "temp": self.temp}
@@ -52,7 +60,7 @@ class Exercise:
         self.desc = json_group["desc"]
         self.repeat = int(json_group["repeat"])
         self.temp = json_group["temp"]
-
+'''
     def to_message(self):
         result = ""
         result += "Упражнение: " + self.name + "\n\n"
@@ -73,7 +81,8 @@ class Training:
         self.finished = False
         self.exercises = []  # list of exercises
 
-    def encode_to_json(self):
+
+''''  def encode_to_json(self):
         finish_code = self.started*1 + self.finished*1
         encoded_exes = []
         for ex in self.exercises:
@@ -90,4 +99,4 @@ class Training:
             new_ex = Exercise()
             new_ex.decode_from_json(encoded_ex)
             self.exercises.append(new_ex)
-
+'''

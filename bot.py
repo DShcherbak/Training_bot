@@ -3,18 +3,20 @@ import multiprocessing
 import json
 from User import *
 from Exercise import *
+from databases import *
 from git_ignore.admin_bot import *
 
-# TODO: Fix merging user libraries
-
+# TODO: New exer with old name = update
 
 FIFTEEN = 15 * 60
 bot = telebot.TeleBot(config.token, threaded=False)
 user_database = config.user_database
 exercise_database = config.exercise_database
-url_training = ""
+connection = None
 users = {}
 exercises = {}
+changed_users = []
+changed_exercise = []
 admin_id = config.admin_id
 
 
@@ -66,28 +68,9 @@ def merge_JSON(old_JSON, new_JSON):
                     users[user_id].trainings[tr].exercises[ex].temp = encoded_user[exer_mask + "temp"]
 
 
-def save_users():
-    global users
-    encoded_users = []
-    for user in users:
-        encoded_users.append(users[user].encode_to_json())
-    with open(user_database, "w") as write_file:
-        json.dump(encoded_users, write_file)
-
-
-def save_exercises():
-    global exercises
-    encoded_exercises = []
-    for exercise_id in exercises:
-        encoded_exercises.append(exercises[exercise_id].encode_to_json())
-    with open(exercise_database, "w") as write_file:
-        json.dump(encoded_exercises, write_file)
-
-
 @bot.message_handler(commands=['start'])
 def send_hello(message):
     global users
-    read_from_database()
     user_id = message.from_user.id
     if user_id in users:
         bot.send_message(user_id, talking.greetings)
@@ -103,7 +86,6 @@ def get_name(message):
     users[user_id] = User()
     users[user_id].full_name = message.text
     users[user_id].id = user_id
-    save_users()
     bot.register_next_step_handler(message, get_nick)
 
 
@@ -113,7 +95,7 @@ def get_nick(message):
     user_id = message.from_user.id
     users[user_id].nickname = message.text
     users[user_id].trainings = []
-    save_users()
+    changed_users.append(('new', user_id))
 
 
 @bot.message_handler(commands=['train'])
@@ -127,13 +109,13 @@ def send_hello(message):
         bot.send_message(user_id, talking.last_train)
         return
     pre_training = talking.start_train
-    pre_training += url_training
+    pre_training += "@@@"
     keyboard = telebot.types.InlineKeyboardMarkup()
     key_go = telebot.types.InlineKeyboardButton(text=talking.button_start, callback_data='.go')
     key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
     keyboard.add(key_go)
     keyboard.add(key_cancel)
-    bot.send_message(user_id, text=pre_training + url_training, reply_markup=keyboard)
+    bot.send_message(user_id, text=pre_training, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '.')
@@ -150,7 +132,7 @@ def next_exercise(call):
         if description == talking.last_exercise:
             user.current_exercise = 0
             user.current_training += 1
-            save_users()
+            changed_users.append(('upd', user_id))
         else:
             user.current_exercise += 1
         keyboard = telebot.types.InlineKeyboardMarkup()
@@ -165,7 +147,19 @@ def next_exercise(call):
 def how_are_you():
     global users
     while True:
-        time.sleep(2 * 60)  # 15*60
+        time.sleep(5)  # 15*60
+        # update users
+        need_update = []
+        print("hello")
+        for p in changed_users:
+            if p[0] == 'new':
+                create_user(connection, user[p[1]])
+            else:
+                need_update.append(p[1])
+        save_users_into_database(connection, users, need_update)
+
+
+        #check users
         for user_key in users:
             user = users[user_key]
             if user.timeout():
@@ -216,15 +210,23 @@ def next_exercise(call):
         bot.send_message(user_id, text=description, reply_markup=keyboard)
 
 
+if __name__ == "__main__":
+    connection = create_connection("bot.db")
+    read_exercises_from_database(connection, exercises)
+    read_users_from_database(connection, users)
 
-print("Polling")
-bot_polling = multiprocessing.Process(target=bot.polling)
-#server_check = multiprocessing.Process(target=how_are_you)
-admin_polling = multiprocessing.Process(target=admin_bot.polling)
-bot_polling.start()
-print("Polling")
-bot.send_message(admin_id, "Hello, admin")
-bot.send_message(admin_id, bot.get_me().id)
-#server_check.start()
-#admin_polling.start()
+    exercises[1].name = "a"
+    save_exercises_into_database(connection,exercises,[1])
+    #select_all_exercises(connection)
+    read_exercises_from_database(connection, exercises)
+    print("Polling")
+    bot_polling = multiprocessing.Process(target=bot.polling)
+    server_check = multiprocessing.Process(target=how_are_you)
+    #admin_polling = multiprocessing.Process(target=admin_bot.polling)
+    bot_polling.start()
+    print("Polling")
+    bot.send_message(admin_id, "Hello, admin")
+    bot.send_message(admin_id, bot.get_me().id)
+    server_check.start()
+    #admin_polling.start()
 

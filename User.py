@@ -4,6 +4,7 @@ from git_ignore import config
 import talking
 import time
 class User:
+    primary_id = -1
     id = -1
     current_training = 0
     current_exercise = 0
@@ -13,6 +14,17 @@ class User:
     status = ""
     trainings = []
 
+    def __init__(self, _primary_id = -1, _id = -1, _full_name = "", _nickname = "", _current_training = -1, _current_exercise = -1, _status = "Sleeping", _check_time = "-1"):
+        self.primary_id = _primary_id
+        self.id = _id
+        self.full_name = _full_name
+        self.nickname = _nickname
+        self.current_training = _current_training
+        self.current_exercise = _current_exercise
+        self.status = _status
+        self.check_time = _check_time
+
+    '''
     def encode_to_json(self):
         encoded_trainings = []
         for train in self.trainings:
@@ -36,6 +48,7 @@ class User:
             new_train = Training()
             new_train.decode_from_json(encoded_train)
             self.trainings.append(new_train)
+    '''
 
     def timeout(self):
         return ((not self.status == "Waiting") and self.check_time < time.time())
