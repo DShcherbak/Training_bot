@@ -298,15 +298,7 @@ if __name__ == "__main__":
     print("Hi")
     admin_polling.start()
     print("there")
-'''
-    changed_users = []
-    exercises[1].name = "a"
-    save_exercises_into_database(connection,exercises,[1])
-    #select_all_exercises(connection)
-    read_exercises_from_database(connection, exercises)
-    read_users_from_database(connection, users)
-    print(users)
-    print("Polling")
+
     bot_polling = multiprocessing.Process(target=bot.polling)
     #server_check = multiprocessing.Process(target=how_are_you)
     bot_polling.start()
@@ -315,4 +307,4 @@ if __name__ == "__main__":
     bot.send_message(admin_id, bot.get_me().id)
     #server_check.start()
     #admin_polling.start()
-'''
+
