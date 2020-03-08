@@ -36,11 +36,19 @@ class Exercise:
     repeat = 0
     temp = ""
 
-    def __init__(self, pattern=None):
+    def __init__(self, pattern=None, _name = "", _link = "", _desc = "", _temp = "",_repeat = -1):
         if not pattern == None:
             self.name = pattern.name
             self.link = pattern.link
             self.desc = pattern.desc
+        else:
+            self.name = _name
+            self.link = _link
+            self.desc = _desc
+            self.temp = _temp
+            self.repeat = _repeat
+
+
 
 
     def set_repeat(self, _repeat):

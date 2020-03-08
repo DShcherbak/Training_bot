@@ -19,32 +19,63 @@ changed_exercise = []
 
 # #####################################
 
+def get_id_by_name(name):
+    global exercises
+    i = 0
+    for i in range(len(exercises)):
+        if exercises[i].name == name:
+            return i
+    return 0
+
+
 def merge_libraries(new_json):
+    print("loading file...")
     global users
     admin_users = {}
-    admin_exercise = {}
     empty_ar = []
+    plans_to_update = []
     for user in users:
         empty_ar.append((user, users[user]))
-    admin_users.update(empty_ar)  # admin_users == users
+    admin_users.update(empty_ar)
+    print(admin_users)# admin_users == users
     with open(new_json, "r") as read_file:
         encoded_users = json.load(read_file)
-    for encoded_user in encoded_users:
-        user_id = int(encoded_user["id"])
-        if int(encoded_user["id"]) in admin_users.keys():
-            for tr in range(16):
-                for ex in range(int(encoded_user["train|" + str(tr) + "|size"])):
-                    while tr not in range(len(admin_users[user_id].trainings)):
-                        admin_users[user_id].trainings.append(Training())
-                    exer_mask = "train|" + str(tr) + "|exer|" + str(ex + 1) + "|"
-                    if ex not in range(len(admin_users[user_id].trainings[tr].exercises)):
-                        new_ex = Exercise(admin_exercise[encoded_user[exer_mask + "name"]])
-                        admin_users[user_id].trainings[tr].exercises.append(new_ex)
-                    admin_users[user_id].trainings[tr].exercises[ex].name = encoded_user[exer_mask + "name"]
-                    admin_users[user_id].trainings[tr].exercises[ex].repeat = int(encoded_user[exer_mask + "repe"])
-                    admin_users[user_id].trainings[tr].exercises[ex].temp = encoded_user[exer_mask + "temp"]
-    save_plans_into_database(db_file, admin_users)
-    read_plans_from_database(db_file, users)
+    for lib in encoded_users:
+        user_id = int(lib["id"])
+        print("Processing" + str(user_id))
+        if user_id in admin_users.keys():
+            print("ongoing")
+            user = users[user_id]
+            all_new = False
+            for t in range(int(lib["trainings"])):
+                one_new = False
+                while len(user.trainings) <= t:
+                    user.trainings.append(Training())
+                    all_new = True
+                for e in range(int(lib["train|" + str(t) + "|size"])):
+                    while len(user.trainings[t].exercises) <= e:
+                        user.trainings[t].exercises.append(Exercise())
+                        one_new = True
+                    ex = user.trainings[t].exercises[e]
+                    hat = "train|" + str(t) + "|exer|" + str(e+1)
+                    _name = lib[hat + "name"]
+                    _temp = lib[hat + "temp"]
+                    _repeat = lib[hat + "repe"]
+                    if all_new or one_new or not ((ex.name == _name) and (ex.temp == _temp) and (ex.repeat == _repeat)):
+                        ex_id = get_id_by_name(_name)
+                        plans_to_update.append((user_id, t, e, ex_id, _temp, _repeat ,True))
+    for plan in plans_to_update:
+        update_current_plan(db_file, plan)
+    read_plans_from_database(db_file, users, exercises)
+    print("plans uploaded!")
+    for user in users:
+        print(users[user].nickname)
+        i = 0
+        for train in users[user].trainings:
+            i = i + 1
+            print(i)
+            for ex in train.exercises:
+                print(ex.name + " : " + ex.temp + " : " + str(ex.repeat))
 
 
 @admin_bot.message_handler(commands=['reload'])
@@ -78,8 +109,18 @@ def send_data(message):
 
 
 @admin_bot.message_handler(content_types=['document'])
-def get_text_messages(message):
+def get_document_messages(message):
     print(message.from_user.id)
+    print(message.document.file_id)
+    file_info = admin_bot.get_file(message.document.file_id)
+    print(file_info)
+    downloaded_file = admin_bot.download_file(file_info.file_path)
+    src = 'uploaded_database.json'
+    with open(src, 'wb') as new_file:
+        new_file.write(downloaded_file)
+    admin_bot.reply_to(message, "Фото добавлено")
+    merge_libraries(src)
+
 # TODO : finish this function
 
 
@@ -201,7 +242,7 @@ def next_exercise(call):
         keyboard.add(key_cancel)
         bot.send_message(user_id, text=description, reply_markup=keyboard)
 
-
+'''
 def how_are_you():
     global users
     while True:
@@ -228,6 +269,7 @@ def how_are_you():
                 elif user.status == "Breaking":
                     bot.send_message(user.id, talking.skip)
                     user.let_go()
+'''
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '!')

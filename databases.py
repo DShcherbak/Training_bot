@@ -70,9 +70,9 @@ def create_exercise(db_file, exercise_pattern):
 def create_plan(db_file, plan):
     connection = create_connection(db_file)
     with connection:
-        sql = ''' INSERT INTO Plans(user_id, train_number, exercise_number, exercise_id, temp, repeat)
+        sql = ''' INSERT INTO Plans(user_id, train_number, exercise_number, exercise_id, temp, repeat, changed)
                     VALUES 
-                    (?, ?, ?, ?, ?, ?)  
+                    (?, ?, ?, ?, ?, ?, ?)  
                            '''
         # (user.id, i, j, exercise.id, exercise.temp, exercise.repeat)
         cur = connection.cursor()
@@ -131,11 +131,14 @@ def read_exercises_from_database(db_file, exercises):
             exercises.append(ex)
 
 
-def read_plans_from_database(db_file, users):
+def read_plans_from_database(db_file, users, exercises, all=False):
     connection = create_connection(db_file)
     with connection:
         cur = connection.cursor()
-        cur.execute("SELECT * FROM Plans WHERE changed = TRUE")
+        sql = "SELECT * FROM Plans"
+        if not all:
+            sql += " WHERE changed = TRUE"
+        cur.execute(sql)
         rows = cur.fetchall()
         some_array = []
         for row in rows:
@@ -143,10 +146,11 @@ def read_plans_from_database(db_file, users):
             user_id = row[1]
             train_num = row[2]
             exer_num = row[3]
-            users[user_id].trainings[train_num].exercises[exer_num] = Exercise()
-            ex = User(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
-            some_array.append((row[1], ex))  # I use row[1], telegram_id, as key in main program
+            pattern = exercises[row[4]]
+            ex = Exercise(_name=pattern.name, _link=pattern.link, _desc=pattern.desc, _temp=row[5], _repeat=row[6])
             users[user_id].trainings[train_num].exercises[exer_num] = ex
+            new_sql = "UPDATE Plans SET changed = True WHERE id = " + str(row[0])
+            cur.execute(new_sql)
 
 
 def save_exercises_into_database(db_file, exercises, changed):
@@ -222,7 +226,17 @@ def save_plans_into_database(db_file, users):
 def update_current_plan(db_file, plan):
     connection = create_connection(db_file)
     with connection:
-        sql = ''' UPDATE Plans
+        sql1 = '''SELECT * FROM Plans
+                    Where user_id = ? AND
+                            train_number = ? AND
+                            exercise_number = ?'''
+        cur = connection.cursor()
+        cur.execute(sql1, (plan[0], plan[1], plan[2]))
+        rows = cur.fetchall()
+        if not rows:
+            create_plan(db_file, plan)
+        else:
+            sql = ''' UPDATE Plans
                      SET   exercise_id = ?,
                            temp = ?, 
                            repeat = ?,
@@ -232,19 +246,20 @@ def update_current_plan(db_file, plan):
                            exercise_number = ?                      
                            '''
 
-        cur = connection.cursor()
-        encoded_plan = (
-            # (base_plan[0], user.id, i, j, exercise.id, exercise.temp, exercise.repeat)
-            #  [0]             [1]  [2][3]   [4]            [5]             [6]
-            plan[4],
-            plan[5],
-            plan[6],
-            plan[1],
-            plan[2],
-            plan[3]
-        )
-        cur.execute(sql, encoded_plan)
-        connection.commit()
+
+            encoded_plan = (
+                # (user.id, i, j, exercise.id, exercise.temp, exercise.repeat)
+                # (user_id, t, e, ex_id, _temp, _repeat ,True)
+                #  [0]     [1][2]   [3]   [4]    [5]     [6]
+                plan[3],
+                plan[4],
+                plan[5],
+                plan[0],
+                plan[1],
+                plan[2]
+            )
+            cur.execute(sql, encoded_plan)
+            connection.commit()
 
 
 def hash7(tuple7):
