@@ -57,10 +57,10 @@ def merge_libraries(new_json):
                         user.trainings[t].exercises.append(Exercise())
                         one_new = True
                     ex = user.trainings[t].exercises[e]
-                    hat = "train|" + str(t) + "|exer|" + str(e+1)
-                    _name = lib[hat + "name"]
-                    _temp = lib[hat + "temp"]
-                    _repeat = lib[hat + "repe"]
+                    hat = "train|" + str(t) + "|exer|" + str(e)
+                    _name = lib[hat + "|name"]
+                    _temp = lib[hat + "|temp"]
+                    _repeat = lib[hat + "|repeat"]
                     if all_new or one_new or not ((ex.name == _name) and (ex.temp == _temp) and (ex.repeat == _repeat)):
                         ex_id = get_id_by_name(_name)
                         plans_to_update.append((user_id, t, e, ex_id, _temp, _repeat ,True))
