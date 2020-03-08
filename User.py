@@ -24,7 +24,7 @@ class User:
         self.status = _status
         self.check_time = _check_time
 
-    '''
+
     def encode_to_json(self):
         encoded_trainings = []
         for train in self.trainings:
@@ -48,10 +48,10 @@ class User:
             new_train = Training()
             new_train.decode_from_json(encoded_train)
             self.trainings.append(new_train)
-    '''
+
 
     def timeout(self):
-        return ((not self.status == "Waiting") and self.check_time < time.time())
+        return ((not self.status == "Waiting") and float(self.check_time) < time.time())
 
     def finished(self):
         return self.current_training >= len(self.trainings)
