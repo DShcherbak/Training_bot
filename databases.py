@@ -1,12 +1,13 @@
 import sqlite3
 from User import User
-from Exercise import ExercisePattern, Exercise
+from Exercise import ExercisePattern, Exercise, Training
 from sqlite3 import Error
 
 hash_code = 100
 
 database = "bot.db"
 
+# TODO: exercises id must be +1
 
 def create_connection(db_file):
     """ create a database connection to the SQLite database
@@ -59,9 +60,9 @@ def create_exercise(db_file, exercise_pattern):
                   VALUES(?,?,?) '''
         cur = connection.cursor()
         encoded_exercise = (
-            exercise_pattern.name,
-            exercise_pattern.link,
-            exercise_pattern.desc
+            exercise_pattern[0],
+            exercise_pattern[1],
+            exercise_pattern[2]
         )
         cur.execute(sql, encoded_exercise)
         return cur.lastrowid
@@ -79,6 +80,78 @@ def create_plan(db_file, plan):
         cur.execute(sql, plan)
         return cur.lastrowid
 
+def get_exercise_from_database(db_file, _id=-1,_name="", _link="", _desc=""):
+    connection = create_connection(db_file)
+    with connection:
+        sql = ''' SELECT * FROM Exercises'''
+        cnt = 0
+        sql += " WHERE "
+        if _id >= 0:
+             sql += 'id = "' + str(_id) + '"'
+             cnt += 1
+        if _name:
+            if cnt > 0:
+                sql += " AND "
+            sql += 'name = "' + str(_name) + '"'
+            cnt += 1
+        if _desc:
+            if cnt > 0:
+                sql += " AND "
+            sql += 'description = "' + str(_desc) + '"'
+            cnt += 1
+        if _link:
+            if cnt > 0:
+                sql += " AND "
+            sql += 'link = "' + str(_link) + '"'
+            cnt += 1
+        print("Get exercise : " + sql)
+        cur = connection.cursor()
+        cur.execute(sql)
+        rows = cur.fetchall()
+        if rows:
+            row = ExercisePattern(_tuple=rows[0])
+        else:
+            row = Exercise()
+        return row
+
+def get_user_from_database(db_file, _id=0):
+    connection = create_connection(db_file)
+    with connection:
+        sql = ''' SELECT * FROM Users WHERE telegram_id = ''' + str(_id)
+        cur = connection.cursor()
+        cur.execute(sql)
+        rows = cur.fetchall()
+        if rows:
+            row = User(_tuple=rows[0])
+        else:
+            row = User()
+        return row
+
+
+def get_user_plans_from_database(db_file, user, user_id):
+    connection = create_connection(db_file)
+    with connection:
+        sql = ''' SELECT * FROM Plans WHERE user_id = ''' + str(user_id)
+        cur = connection.cursor()
+        cur.execute(sql)
+        rows = cur.fetchall()
+        for row in rows:
+            tr_id = row[2]
+            ex_id = row[3]
+            while len(user.trainings) <= tr_id:
+                user.trainings.append(Training())
+            while len(user.trainings[tr_id].exercises) < ex_id:
+                user.trainings[tr_id].exercises.adppend(Exercise())
+            new_ex_pattern = get_exercise_from_database(db_file, _id=row[4])
+            print(type(new_ex_pattern))
+            new_ex = Exercise(pattern=new_ex_pattern, _temp=row[5], _repeat=row[6])
+            if len(user.trainings[tr_id].exercises) == ex_id:
+                user.trainings[tr_id].exercises.append(new_ex)
+            else:
+                user.trainings[tr_id].exercises[ex_id] = new_ex
+
+
+
 
 def update_user(db_file, user):
     connection = create_connection(db_file)
@@ -94,13 +167,71 @@ def update_user(db_file, user):
 
         cur = connection.cursor()
         encoded_user = (
-            user.id,
             user.full_name,
             user.nickname,
             user.current_exercise,
             user.current_training,
             user.status,
-            user.check_time)
+            user.check_time,
+            user.id
+            )
+        cur.execute(sql, encoded_user)
+        connection.commit()
+
+
+def update_exercise(db_file, _name = "", _desc="", _link="", args=()):
+    connection = create_connection(db_file)
+    with connection:
+        cnt = 0
+        sql = ''' UPDATE Exercises SET '''
+        if _name:
+             sql += 'name = "' + str(args[cnt]) + '"'
+             cnt += 1
+        if _desc:
+            if cnt > 0:
+                sql += ", "
+            sql += 'description = "' + str(args[cnt]) + '"'
+            cnt += 1
+        if _link:
+            if cnt > 0:
+                sql += ", "
+            sql += 'link = "' + str(args[cnt]) + '"'
+            cnt += 1
+        sql += " WHERE "
+        cnt = 0
+        if _name:
+             sql += 'name = "' +  str(_name) + '"'
+             cnt += 1
+        if _desc:
+            if cnt > 0:
+                sql += " AND "
+            sql += 'description = "' +  str(_desc) + '"'
+            cnt += 1
+        if _link:
+            if cnt > 0:
+                sql += " AND "
+            sql += 'link = "' +  str(_link) + '"'
+            cnt += 1
+        print("Update ex : " + sql)
+        cur = connection.cursor()
+
+        cur.execute(sql)
+        connection.commit()
+
+
+def user_plus_train(db_file, user_id, ex, train):
+    connection = create_connection(db_file)
+    with connection:
+        sql = ''' UPDATE Users
+                      SET   current_exercise = ?, 
+                            current_training = ?
+                      WHERE telegram_id = ?'''
+
+        cur = connection.cursor()
+        encoded_user = (
+            ex,
+            train,
+            user_id)
         cur.execute(sql, encoded_user)
         connection.commit()
 
@@ -114,7 +245,7 @@ def read_users_from_database(db_file, exercises):
         some_array = []
         for row in rows:
             print(row)
-            ex = User(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            ex = User(_tuple=row)
             some_array.append((row[1], ex))  # I use row[1], telegram_id, as key in main program
         exercises.update(some_array)
 
@@ -127,8 +258,8 @@ def read_exercises_from_database(db_file, exercises):
         rows = cur.fetchall()
         for row in rows:
             print(row)
-            ex = ExercisePattern(row[0], row[1], row[2], row[3])
-            exercises.append(ex)
+            ex = ExercisePattern(_tuple=row)
+            exercises.update([(row[0], ex)])
 
 
 def read_plans_from_database(db_file, users, exercises, all=False):
@@ -146,9 +277,14 @@ def read_plans_from_database(db_file, users, exercises, all=False):
             user_id = row[1]
             train_num = row[2]
             exer_num = row[3]
-            pattern = exercises[row[4]]
+            pattern = exercises[row[4]+1]
             ex = Exercise(_name=pattern.name, _link=pattern.link, _desc=pattern.desc, _temp=row[5], _repeat=row[6])
-            users[user_id].trainings[train_num].exercises[exer_num] = ex
+            while len(users[user_id].trainings) <= train_num:
+                users[user_id].trainings.append(Training())
+            if len(users[user_id].trainings[train_num].exercises) <= exer_num:
+                users[user_id].trainings[train_num].exercises.append(ex)
+            else:
+                users[user_id].trainings[train_num].exercises[exer_num] = ex
             new_sql = "UPDATE Plans SET changed = True WHERE id = " + str(row[0])
             cur.execute(new_sql)
 

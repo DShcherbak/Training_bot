@@ -4,11 +4,17 @@ class ExercisePattern:
     link = ""
     desc = ""
 
-    def __init__(self, _id = -1, _name = "", _link = "", _desc = ""):
-        self.id = _id
-        self.name = _name
-        self.link = _link
-        self.desc = _desc
+    def __init__(self, _tuple=(),_id = -1, _name = "", _link = "", _desc = ""):
+        if _tuple:
+            self.id = _tuple[0]
+            self.name = _tuple[1]
+            self.link = _tuple[2]
+            self.desc = _tuple[3]
+        else:
+            self.id = _id
+            self.name = _name
+            self.link = _link
+            self.desc = _desc
 
     '''
     def encode_to_json(self):
@@ -36,8 +42,8 @@ class Exercise:
     repeat = 0
     temp = ""
 
-    def __init__(self, pattern=None, _name = "", _link = "", _desc = "", _temp = "",_repeat = -1):
-        if not pattern == None:
+    def __init__(self, pattern=None,  _name = "", _link = "", _desc = "", _temp = "",_repeat = -1):
+        if pattern:
             self.name = pattern.name
             self.link = pattern.link
             self.desc = pattern.desc
@@ -45,8 +51,8 @@ class Exercise:
             self.name = _name
             self.link = _link
             self.desc = _desc
-            self.temp = _temp
-            self.repeat = _repeat
+        self.temp = _temp
+        self.repeat = _repeat
 
 
 
