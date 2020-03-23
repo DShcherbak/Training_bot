@@ -49,6 +49,7 @@ def merge_libraries(new_json):
                         exercise = get_exercise_from_database(db_file, _name=_name)
                         ex_id = exercise.id
                         plans_to_update.append((user_id, t, e, ex_id, _temp, _repeat, True))
+    print("New_plans: ",plans_to_update)
     for plan in plans_to_update:
         update_current_plan(db_file, plan)
 

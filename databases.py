@@ -68,17 +68,19 @@ def create_exercise(db_file, exercise_pattern):
         return cur.lastrowid
 
 
-def create_plan(db_file, plan):
-    connection = create_connection(db_file)
-    with connection:
-        sql = ''' INSERT INTO Plans(user_id, train_number, exercise_number, exercise_id, temp, repeat, changed)
-                    VALUES 
-                    (?, ?, ?, ?, ?, ?, ?)  
-                           '''
-        # (user.id, i, j, exercise.id, exercise.temp, exercise.repeat)
-        cur = connection.cursor()
-        cur.execute(sql, plan)
-        return cur.lastrowid
+def create_plan(db_file, connection, plan):
+    # connection = create_connection(db_file)
+    # with connection:
+    print("New plan for user : ", plan[0])
+    sql = ''' INSERT INTO Plans(user_id, train_number, exercise_number, exercise_id, temp, repeat, changed)
+                VALUES 
+                (?, ?, ?, ?, ?, ?, ?)  
+                       '''
+    # (user.id, i, j, exercise.id, exercise.temp, exercise.repeat)
+    cur = connection.cursor()
+    cur.execute(sql, plan)
+
+    return cur.lastrowid
 
 def get_exercise_from_database(db_file, _id=-1,_name="", _link="", _desc=""):
     connection = create_connection(db_file)
@@ -370,8 +372,9 @@ def update_current_plan(db_file, plan):
         cur.execute(sql1, (plan[0], plan[1], plan[2]))
         rows = cur.fetchall()
         if not rows:
-            create_plan(db_file, plan)
+            create_plan(db_file, connection, plan)
         else:
+            print("rows : ", rows)
             sql = ''' UPDATE Plans
                      SET   exercise_id = ?,
                            temp = ?, 
