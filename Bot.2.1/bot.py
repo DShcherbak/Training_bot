@@ -16,9 +16,43 @@ db_file = "bot.db"
 # users = {}
 # exercises = {}
 last_message = 0
+test_mode = True
 
 
-# #####################################
+# ########################################
+#
+#
+#
+#
+#
+# ADMIN BOT BEGIN
+#
+#
+#
+#
+#
+# ########################################
+
+@admin_bot.message_handler(commands=['stop'])
+def reload(message):
+    global test_mode, admin_id
+    if str(message.from_user.id) in admin_id:
+        test_mode = True
+        admin_bot.send_message(message.from_user.id, "Successfully stopped")
+    else:
+        admin_bot.send_message(message.from_user.id, "You don't have admin rights" + message.from_user.id)
+        print(message.from_user.id)
+
+
+@admin_bot.message_handler(commands=['reload'])
+def reload(message):
+    global test_mode, admin_id
+    if str(message.from_user.id) in admin_id:
+        test_mode = False
+        admin_bot.send_message(message.from_user.id, "Successfully reloaded")
+    else:
+        admin_bot.send_message(message.from_user.id, "You don't have admin rights" + message.from_user.id)
+        print(message.from_user.id)
 
 
 def merge_libraries(new_json):
@@ -58,6 +92,7 @@ def merge_libraries(new_json):
                         ex_id = exercise.id
                         plans_to_update.append((user_id, t, e, ex_id, _temp, _repeat, True))
     for plan in plans_to_update:
+        print(plan)
         update_current_plan(db_file, plan)
 
 
@@ -99,8 +134,8 @@ def send_data(message):
 
 @admin_bot.message_handler(content_types=['document'])
 def get_document_messages(message):
-    test = False
-    if test:
+    global test_mode
+    if test_mode:
         pass
     else:
         print(message.from_user.id)
@@ -111,7 +146,7 @@ def get_document_messages(message):
         src = 'uploaded_database.json'
         with open(src, 'wb') as new_file:
             new_file.write(downloaded_file)
-        admin_bot.reply_to(message, "Фото добавлено")
+        admin_bot.reply_to(message, "База обновлена")
         merge_libraries(src)
 
 
@@ -150,7 +185,20 @@ def get_link(message):
     admin_bot.send_message(message.from_user.id, exercise.to_message())
 
 
-#########################################
+# ########################################
+#
+#
+#
+#
+#
+# ADMIN BOT END
+#
+#
+#
+#
+#
+# ########################################
+
 
 
 @bot.message_handler(commands=['start'])
@@ -194,7 +242,8 @@ def send_hello(message):
         bot.send_message(user_id, talking.ask_start)
         return
     if user.finished():
-        print(user.trainings, end=" < ")
+        print(user.trainings)
+        print(" < ")
         print(user.current_training)
         bot.send_message(user_id, talking.last_train)
         return
@@ -209,7 +258,6 @@ def send_hello(message):
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '.')
 def next_exercise(call):
-
     user_id = call.from_user.id
     user = get_user_from_database(db_file, user_id)
     print(user_id, user.status)
@@ -225,9 +273,16 @@ def next_exercise(call):
         if description == talking.last_exercise:
             user.current_exercise = 0
             user.current_training += 1
-            user.status = "Sleeping"
+            description = "Тренировка номер " + str(user.current_training) + " завершена!\n" + description
+            description += talking.chat
             bot.send_message(user_id, description)
             user_plus_train(db_file, user_id, user.current_exercise, user.current_training)
+        elif user.current_exercise == len(user.trainings[user.current_training].exercises)-1:
+            user.current_exercise += 1
+            keyboard = telebot.types.InlineKeyboardMarkup()
+            key_end = telebot.types.InlineKeyboardButton(text=talking.button_end, callback_data='.end')
+            keyboard.add(key_end)
+            bot.send_message(user_id, text=description, reply_markup=keyboard)
         else:
             user.current_exercise += 1
             keyboard = telebot.types.InlineKeyboardMarkup()
@@ -238,51 +293,6 @@ def next_exercise(call):
             keyboard.add(key_cancel)
             bot.send_message(user_id, text=description, reply_markup=keyboard)
     update_user(db_file, user)
-
-
-def how_are_you():
-    users = {}
-    exercises = {}
-    read_users_from_database(db_file, users)
-    read_exercises_from_database(db_file, exercises)
-    read_plans_from_database(db_file, users, exercises, True)
-    while True:
-        time.sleep(10)  # 15*60+
-        print("Scanning... (Data download)")
-        read_users_from_database(db_file, users)
-        read_plans_from_database(db_file, users, exercises, False)
-        print("Scanning... (Start)")
-        for user_id in users:
-            print(user_id, users[user_id].status)
-            user = users[user_id]
-            if user.status != "Waiting" and user.check_time == -1:
-                print(user.check_time)
-                user.check_time = time.time()
-                print(user.check_time)
-                update_user(db_file, user)
-            if user.timeout():
-                if user.status == "Sleeping":
-                    bot.send_message(user.id, user.nickname + talking.go_train)
-                    bot.send_message(admin_id[0], "Пользователь " + user.full_name + " (" + user.nickname + ") " +
-                                     "давно не занимался!")
-                    user.check_time += 20  # 60 * 60 * 4
-
-                elif user.status == "Training":
-                    description = talking.continue_train
-                    keyboard = telebot.types.InlineKeyboardMarkup()
-                    key_go = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='!next')
-                    key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='!cancel')
-                    keyboard.add(key_go)
-                    keyboard.add(key_cancel)
-                    bot.send_message(user.id, text=description, reply_markup=keyboard)
-                    user.check_time += 20  # 60 * 30
-                    user.status = "Breaking"
-                elif user.status == "Breaking":
-                    bot.send_message(user.id, talking.skip)
-                    user.let_go()
-                update_user(db_file, user)
-            else:
-                print(user.check_time, " >= ", time.time())
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '!')
@@ -315,6 +325,51 @@ def next_exercise(call):
         update_user(db_file, user)
 
 
+def how_are_you():
+    users = {}
+    exercises = {}
+    read_users_from_database(db_file, users)
+    read_exercises_from_database(db_file, exercises)
+    read_plans_from_database(db_file, users, exercises, True)
+    while True:
+        time.sleep(10)  # 15*60+
+        print("Scanning... (Data download)")
+        read_users_from_database(db_file, users)
+        read_plans_from_database(db_file, users, exercises, False)
+        print("Scanning... (Start)")
+        for user_id in users:
+            print(user_id, users[user_id].status)
+            user = users[user_id]
+            if user.status != "Waiting" and user.check_time == -1:
+                print(user.check_time)
+                user.check_time = time.time()
+                print(user.check_time)
+                update_user(db_file, user)
+            if user.timeout():
+                if user.status == "Sleeping":
+                    bot.send_message(user.id, user.nickname + talking.go_train)
+                    bot.send_message(admin_id, "Пользователь " + user.full_name + " (" + user.nickname + ") " +
+                                     "давно не занимался!")
+                    user.check_time += 20  # 60 * 60 * 4
+
+                elif user.status == "Training":
+                    description = talking.continue_train
+                    keyboard = telebot.types.InlineKeyboardMarkup()
+                    key_go = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='!next')
+                    key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='!cancel')
+                    keyboard.add(key_go)
+                    keyboard.add(key_cancel)
+                    bot.send_message(user.id, text=description, reply_markup=keyboard)
+                    user.check_time += 20  # 60 * 30
+                    user.status = "Breaking"
+                elif user.status == "Breaking":
+                    bot.send_message(user.id, talking.skip)
+                    user.let_go()
+                update_user(db_file, user)
+            else:
+                print(user.check_time, " >= ", time.time())
+
+
 
 if __name__ == "__main__":
     admin_polling = multiprocessing.Process(target=admin_bot.polling)
@@ -322,9 +377,10 @@ if __name__ == "__main__":
 
     bot_polling = multiprocessing.Process(target=bot.polling)
     bot_polling.start()
-    bot.send_message(admin_id, "Hello, admin")
+    bot.send_message(admin_id[0], "Hello, admin")
 
-    #server_check = multiprocessing.Process(target=how_are_you)
-    #server_check.start()
+    # server_check = multiprocessing.Process(target=how_are_you)
+    # server_check.start()
     # bot.send_message(admin_id, bot.get_me().id)
     # admin_polling.start()
+    pass
