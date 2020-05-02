@@ -81,8 +81,11 @@ def create_plan(db_file, plan):
         return cur.lastrowid
 
 def get_exercise_from_database(db_file, _id=0,_name="", _link="", _desc=""):
-    if(_id < 0):
-        ex = Exercise(_name="Круг " + str(-_id), _temp= ".", _repeat=0, _link = _link, _desc = _desc)
+    if _id < 0:
+        ex = Exercise(_id = _id, _name="Круг " + str(-_id), _temp= ".", _repeat=0, _link = _link, _desc = _desc)
+        return ex
+    if _name[:5] == "Круг ":
+        ex = Exercise(_id = -int(_name[5:]), _name=_name + str(-_id), _temp= ".", _repeat=0, _link = _link, _desc = _desc)
         return ex
     connection = create_connection(db_file)
     with connection:

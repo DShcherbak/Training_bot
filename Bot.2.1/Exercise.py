@@ -38,14 +38,14 @@ class ExercisePattern:
 
 
 class Exercise:
-    id = -1
+    id = 0
     name = ""
     link = ""
     desc = ""
     repeat = 0
     temp = ""
 
-    def __init__(self, pattern=None,  _id = -1, _name = "", _link = "", _desc = "", _temp = "",_repeat = -1):
+    def __init__(self, pattern=None,  _id = 0, _name = "", _link = "", _desc = "", _temp = "",_repeat = -1):
         if pattern:
             self.id = pattern.id
             self.name = pattern.name

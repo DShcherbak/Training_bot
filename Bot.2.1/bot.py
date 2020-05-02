@@ -33,6 +33,8 @@ test_mode = True
 #
 # ########################################
 
+
+
 @admin_bot.message_handler(commands=['stop'])
 def reload(message):
     global test_mode, admin_id
@@ -247,7 +249,7 @@ def send_hello(message):
         print(user.current_training)
         bot.send_message(user_id, talking.last_train)
         return
-    pre_training = "Тренировка номер " + str(user.current_training+1) + "\n" + talking.start_train
+    pre_training = "Тренировка номер " + str(user.current_training+1) + talking.start_train
     keyboard = telebot.types.InlineKeyboardMarkup()
     key_go = telebot.types.InlineKeyboardButton(text=talking.button_start, callback_data='.go')
     key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
@@ -325,6 +327,12 @@ def next_exercise(call):
         update_user(db_file, user)
 
 
+##############################################################################
+
+# sdfsdfsdf
+
+#################################################################################
+
 def how_are_you():
     users = {}
     exercises = {}
@@ -340,7 +348,10 @@ def how_are_you():
         for user_id in users:
             print(user_id, users[user_id].status)
             user = users[user_id]
-            if user.status != "Waiting" and user.check_time == -1:
+            if user.status != "Waiting" or user.check_time == -1:
+                if len(user.trainings) > 0:
+                    bot.send_message(user.id, talking.training_ready)
+
                 print(user.check_time)
                 user.check_time = time.time()
                 print(user.check_time)
@@ -368,7 +379,7 @@ def how_are_you():
                 update_user(db_file, user)
             else:
                 print(user.check_time, " >= ", time.time())
-
+        print("Scanning... (Finished)")
 
 
 if __name__ == "__main__":
