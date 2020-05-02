@@ -6,8 +6,6 @@ from databases import *
 
 # TODO: New exer with old name = update
 
-FIFTEEN = 15 * 60
-TWO_DAYS = 60*6*24*2
 bot = telebot.TeleBot(config.token, threaded=False)
 admin_bot = telebot.TeleBot(config.admin_token, threaded=False)
 user_database = config.user_database
@@ -15,7 +13,6 @@ admin_id = config.admin_id
 db_file = "bot.db"
 # users = {}
 # exercises = {}
-last_message = 0
 test_mode = True
 
 
@@ -32,7 +29,6 @@ test_mode = True
 #
 #
 # ########################################
-
 
 
 @admin_bot.message_handler(commands=['stop'])
@@ -202,16 +198,23 @@ def get_link(message):
 # ########################################
 
 
-
 @bot.message_handler(commands=['start'])
 def send_hello(message):
     user_id = message.from_user.id
+    print(type(user_id))
     user = get_user_from_database(db_file, user_id)  # users[user_id]
+
+    update_user(db_file, user)
     if user.id >= 0:
         bot.send_message(user_id, talking.greetings)
     else:
         new_user = User(_id=user_id)
+        show_time(user.check_time)
         create_user(db_file, new_user)
+        new_user.status = "Waiting"
+        new_user.check_time = -1
+        update_user(db_file, new_user)
+
         bot.send_message(message.from_user.id, talking.first_hello)
         bot.register_next_step_handler(message, get_name)
 
@@ -240,6 +243,10 @@ def send_hello(message):
     user_id = message.from_user.id
     user = get_user_from_database(db_file, user_id)  # users[user_id]
     get_user_plans_from_database(db_file, user, user_id)
+    if not user.last_message_id == -1:
+        bot.delete_message(user.id, user.last_message_id)
+        user.last_message_id = -1
+
     if user.id < 0:  # not in users.keys():
         bot.send_message(user_id, talking.ask_start)
         return
@@ -248,6 +255,7 @@ def send_hello(message):
         print(" < ")
         print(user.current_training)
         bot.send_message(user_id, talking.last_train)
+        print(user.last_message_id, " is correct")
         return
     pre_training = "Тренировка номер " + str(user.current_training+1) + talking.start_train
     keyboard = telebot.types.InlineKeyboardMarkup()
@@ -255,55 +263,81 @@ def send_hello(message):
     key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
     keyboard.add(key_go)
     keyboard.add(key_cancel)
-    bot.send_message(user_id, text=pre_training, reply_markup=keyboard)
+    last_message = bot.send_message(user_id, text=pre_training, reply_markup=keyboard)
+    user.last_message_id = last_message.message_id
+    update_user(db_file, user)
 
 
 @bot.callback_query_handler(func=lambda call: call.data[0] == '.')
 def next_exercise(call):
     user_id = call.from_user.id
     user = get_user_from_database(db_file, user_id)
+
     print(user_id, user.status)
     user.status = "Training"
-    user.check_time += 20
+    user.check_time = time.time() + config.FIFTEEN
+
+    if not user.last_message_id == -1:
+        bot.delete_message(user.id, user.last_message_id)
+        user.last_message_id = -1
     update_user(db_file, user)
-    bot.delete_message(call.from_user.id, call.message.message_id)
+
     if call.data == '.cancel':
-        bot.send_message(user_id, talking.skip)
+        last_message = bot.send_message(user_id, talking.skip)
+        user.last_message_id = last_message.message_id
         user.let_go()
+
     else:
         description = user.get_exercise()
         if description == talking.last_exercise:
             user.current_exercise = 0
             user.current_training += 1
+
+            user.status = "Sleeping"
+            user.check_time = time.time() + config.TWO_DAYS
+
             description = "Тренировка номер " + str(user.current_training) + " завершена!\n" + description
             description += talking.chat
             bot.send_message(user_id, description)
+
             user_plus_train(db_file, user_id, user.current_exercise, user.current_training)
+
         elif user.current_exercise == len(user.trainings[user.current_training].exercises)-1:
             user.current_exercise += 1
+            user.check_time = time.time() + config.FIFTEEN
+
             keyboard = telebot.types.InlineKeyboardMarkup()
             key_end = telebot.types.InlineKeyboardButton(text=talking.button_end, callback_data='.end')
             keyboard.add(key_end)
-            bot.send_message(user_id, text=description, reply_markup=keyboard)
+            last_message = bot.send_message(user_id, text=description, reply_markup=keyboard)
+            user.last_message_id = last_message.message_id
         else:
             user.current_exercise += 1
+            user.check_time = time.time() + config.FIFTEEN
+            
             keyboard = telebot.types.InlineKeyboardMarkup()
-
             key_next = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='.next')
             key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
             keyboard.add(key_next)
             keyboard.add(key_cancel)
-            bot.send_message(user_id, text=description, reply_markup=keyboard)
+            
+            last_message = bot.send_message(user_id, text=description, reply_markup=keyboard)
+            user.last_message_id = last_message.message_id
     update_user(db_file, user)
 
 
+'''
 @bot.callback_query_handler(func=lambda call: call.data[0] == '!')
 def next_exercise(call):
     # global users
     user_id = call.from_user.id
     user = get_user_from_database(db_file, user_id)
+
+    print(user_id, user.status)
     user.status = "Training"
-    user.check_time = time.time() + 20  # FIFTEEN
+    user.check_time = time.time() + 20  #FIXME Check_time += FIFTEEN
+    update_user(db_file, user)
+
     bot.delete_message(call.from_user.id, call.message.message_id)
     if call.data == '!cancel':
         bot.send_message(user_id, talking.skip)
@@ -313,8 +347,17 @@ def next_exercise(call):
         if description == talking.last_exercise:
             user.current_exercise = 0
             user.current_training += 1
+
+            user.status = "Sleeping"
+            user.check_time = time.time() + 20  # FIXME Check_time += TWODAYS
+            update_user(db_file, user)
+
+            description = "Тренировка номер " + str(user.current_training) + " завершена!\n" + description
+            description += talking.chat
             bot.send_message(user_id, description)
+
             user_plus_train(db_file, user_id, user.current_exercise, user.current_training)
+
         else:
             user.current_exercise += 1
             keyboard = telebot.types.InlineKeyboardMarkup()
@@ -325,7 +368,7 @@ def next_exercise(call):
             keyboard.add(key_cancel)
             bot.send_message(user_id, text=description, reply_markup=keyboard)
         update_user(db_file, user)
-
+'''
 
 ##############################################################################
 
@@ -333,14 +376,16 @@ def next_exercise(call):
 
 #################################################################################
 
+
 def how_are_you():
     users = {}
     exercises = {}
     read_users_from_database(db_file, users)
     read_exercises_from_database(db_file, exercises)
     read_plans_from_database(db_file, users, exercises, True)
+
     while True:
-        time.sleep(10)  # 15*60+
+        time.sleep(30)  # 15*60+
         print("Scanning... (Data download)")
         read_users_from_database(db_file, users)
         read_plans_from_database(db_file, users, exercises, False)
@@ -348,50 +393,76 @@ def how_are_you():
         for user_id in users:
             print(user_id, users[user_id].status)
             user = users[user_id]
-            if user.status != "Waiting" or user.check_time == -1:
+            if user.status == "Waiting" or user.check_time == -1:
                 if len(user.trainings) > 0:
                     bot.send_message(user.id, talking.training_ready)
-
-                print(user.check_time)
-                user.check_time = time.time()
-                print(user.check_time)
+                    user.status = "Sleeping"
+                    user.check_time = time.time() + config.TWO_DAYS
+                else:
+                    user.check_time = -1
                 update_user(db_file, user)
             if user.timeout():
                 if user.status == "Sleeping":
-                    bot.send_message(user.id, user.nickname + talking.go_train)
-                    bot.send_message(admin_id, "Пользователь " + user.full_name + " (" + user.nickname + ") " +
+                    if not user.last_message_id == -1:
+                        bot.delete_message(user.id, user.last_message_id)
+                        user.last_message_id = -1
+
+                    last_message = bot.send_message(user.id, user.nickname + talking.go_train)
+                    user.last_message_id = last_message.message_id
+                    bot.send_message(admin_id[0], "Пользователь " + user.full_name + " (" + user.nickname + ") " +
                                      "давно не занимался!")
-                    user.check_time += 20  # 60 * 60 * 4
+                    user.check_time = time.time() + 20  # 60 * 60 * 4
 
                 elif user.status == "Training":
+                    if not user.last_message_id == -1:
+                        bot.delete_message(user.id, user.last_message_id)
+                        user.last_message_id = -1
+
                     description = talking.continue_train
                     keyboard = telebot.types.InlineKeyboardMarkup()
-                    key_go = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='!next')
-                    key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='!cancel')
+                    key_go = telebot.types.InlineKeyboardButton(text=talking.button_next, callback_data='.next')
+                    key_cancel = telebot.types.InlineKeyboardButton(text=talking.button_cancel, callback_data='.cancel')
                     keyboard.add(key_go)
                     keyboard.add(key_cancel)
-                    bot.send_message(user.id, text=description, reply_markup=keyboard)
-                    user.check_time += 20  # 60 * 30
+
+                    last_message = bot.send_message(user.id, text=description, reply_markup=keyboard)
+                    user.last_message_id = last_message.message_id
+
+                    user.check_time = time.time() + 20  # 60 * 30
                     user.status = "Breaking"
                 elif user.status == "Breaking":
-                    bot.send_message(user.id, talking.skip)
+                    if not user.last_message_id == -1:
+                        bot.delete_message(user.id, user.last_message_id)
+                        user.last_message_id = -1
+
+                    last_message = bot.send_message(user.id, talking.skip)
+                    user.last_message_id = last_message.message_id
                     user.let_go()
                 update_user(db_file, user)
             else:
-                print(user.check_time, " >= ", time.time())
+                print(show_time(user.check_time), " >= ", show_time(time.time()))
         print("Scanning... (Finished)")
 
 
+def show_time(fl_time):
+    cur_time = int(fl_time) % 86400
+    sec = cur_time % 60
+    mns = (cur_time // 60) % 60
+    hrs = (cur_time // 3600 + 3) % 24
+    ds  = (cur_time // 3600*24) % 30
+    return str(ds) + " :: " + str(hrs) + ":" + str(mns) + ":" + str(sec)
+
+
 if __name__ == "__main__":
+    print(show_time(time.time()))
     admin_polling = multiprocessing.Process(target=admin_bot.polling)
     admin_polling.start()
 
     bot_polling = multiprocessing.Process(target=bot.polling)
     bot_polling.start()
-    bot.send_message(admin_id[0], "Hello, admin")
+    # bot.send_message(admin_id[0], "Hello, admin")
 
-    # server_check = multiprocessing.Process(target=how_are_you)
-    # server_check.start()
-    # bot.send_message(admin_id, bot.get_me().id)
-    # admin_polling.start()
+    server_check = multiprocessing.Process(target=how_are_you)
+    server_check.start()
+
     pass

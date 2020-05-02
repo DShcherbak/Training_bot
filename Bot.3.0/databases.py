@@ -28,15 +28,15 @@ def create_connection(db_file):
 def create_user(db_file, user):
     connection = create_connection(db_file)
     with connection:
-        print("addding user")
         sql = ''' INSERT INTO Users (telegram_id, 
         full_name,
         nickname, 
         current_exercise, 
         current_training,
         status,
-        check_time)
-        VALUES(?,?,?,?,?,?,?) '''
+        check_time,
+        last_message_id)
+        VALUES(?,?,?,?,?,?,?,?) '''
         cur = connection.cursor()
         encoded_user = (
             user.id,
@@ -45,10 +45,9 @@ def create_user(db_file, user):
             user.current_exercise,
             user.current_training,
             user.status,
-            user.check_time)
-        print("adding...")
+            user.check_time,
+            user.last_message_id)
         cur.execute(sql, encoded_user)
-        print("added!")
         connection.commit()
         return cur.lastrowid
 
@@ -110,7 +109,6 @@ def get_exercise_from_database(db_file, _id=0,_name="", _link="", _desc=""):
                 sql += " AND "
             sql += 'link = "' + str(_link) + '"'
             cnt += 1
-        print("Get exercise : " + sql)
         cur = connection.cursor()
         cur.execute(sql)
         rows = cur.fetchall()
@@ -151,7 +149,6 @@ def get_user_plans_from_database(db_file, user, user_id):
             while len(user.trainings[tr_id].exercises) < ex_id:
                 user.trainings[tr_id].exercises.adppend(Exercise())
             new_ex_pattern = get_exercise_from_database(db_file, _id=row[4])
-            print(type(new_ex_pattern))
             new_ex = Exercise(pattern=new_ex_pattern, _temp=row[5], _repeat=row[6])
             if len(user.trainings[tr_id].exercises) == ex_id:
                 user.trainings[tr_id].exercises.append(new_ex)
@@ -170,7 +167,8 @@ def update_user(db_file, user):
                         current_exercise = ?, 
                         current_training = ?,
                         status = ?,
-                        check_time = ?
+                        check_time = ?,
+                        last_message_id = ?
                   WHERE telegram_id = ?'''
 
         cur = connection.cursor()
@@ -181,6 +179,7 @@ def update_user(db_file, user):
             user.current_training,
             user.status,
             user.check_time,
+            user.last_message_id,
             user.id
             )
         cur.execute(sql, encoded_user)
@@ -220,7 +219,6 @@ def update_exercise(db_file, _name = "", _desc="", _link="", args=()):
                 sql += " AND "
             sql += 'link = "' +  str(_link) + '"'
             cnt += 1
-        print("Update ex : " + sql)
         cur = connection.cursor()
 
         cur.execute(sql)
@@ -252,7 +250,6 @@ def read_users_from_database(db_file, exercises):
         rows = cur.fetchall()
         some_array = []
         for row in rows:
-            print(row)
             ex = User(_tuple=row)
             some_array.append((row[1], ex))  # I use row[1], telegram_id, as key in main program
         exercises.update(some_array)
@@ -265,7 +262,6 @@ def read_exercises_from_database(db_file, exercises):
         cur.execute("SELECT * FROM Exercises")
         rows = cur.fetchall()
         for row in rows:
-            print(row)
             ex = ExercisePattern(_tuple=row)
             exercises.update([(row[0], ex)])
 
@@ -281,14 +277,13 @@ def read_plans_from_database(db_file, users, exercises, all=False):
         rows = cur.fetchall()
         some_array = []
         for row in rows:
-            print(row)
             user_id = row[1]
             train_num = row[2]
             exer_num = row[3]
             if(row[4] < 0) :
                 pattern = get_exercise_from_database(db_file, row[4])
             else:
-                pattern = exercises[row[4] + 1]
+                pattern = exercises[row[4]]
             ex = Exercise(_name=pattern.name, _link=pattern.link, _desc=pattern.desc, _temp=row[5], _repeat=row[6])
             while len(users[user_id].trainings) <= train_num:
                 users[user_id].trainings.append(Training())
@@ -342,7 +337,6 @@ def save_plans_into_database(db_file, users):
         some_array = []
         counter = 0
         for row in rows:
-            print(row)
             some_array.append((hash7(row), row))
         plans.update(some_array)
         for user in users:
@@ -360,7 +354,6 @@ def save_plans_into_database(db_file, users):
                         base_plan = plans[key]
                         new_plan = (base_plan[0], user.id, i, j, exercise.id, exercise.temp, exercise.repeat, True)
                         if base_plan == new_plan:
-                            print("YEAH!")
                             counter = counter + 1
                         else:
                             plans_to_update.append(new_plan)  # UPDATE Plans
@@ -417,51 +410,3 @@ def hash3(a, b, c):
     return a * (hash_code ** 2) + b * hash_code + c
 
 
-def select_all_exercises(db_file):
-    """
-    Query all rows in the tasks table
-    :param connection: the Connection object
-    :return:
-    """
-    connection = create_connection(db_file)
-    with connection:
-        cur = connection.cursor()
-        cur.execute("SELECT * FROM Exercises")
-
-        rows = cur.fetchall()
-
-        for row in rows:
-            print(row)
-
-
-def select_task_by_priority(db_file, priority):
-    """
-    Query tasks by priority
-    :param connection: the Connection object
-    :param priority:
-    :return:
-    """
-    connection = create_connection(db_file)
-    with connection:
-        cur = connection.cursor()
-        cur.execute("SELECT * FROM Exercises WHERE id=?", (priority,))
-
-        rows = cur.fetchall()
-
-        for row in rows:
-            print(row)
-
-
-def main():
-    # create a database connection
-    connection = create_connection(database)
-    with connection:
-        print("1. Query task by priority:")
-        select_task_by_priority(connection, 1)
-
-        print("2. Query all tasks")
-        select_all_exercises(connection)
-
-
-if __name__ == '__main__':
-    main()
