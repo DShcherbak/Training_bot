@@ -10,7 +10,8 @@ bot = telebot.TeleBot(config.token, threaded=False)
 admin_bot = telebot.TeleBot(config.admin_token, threaded=False)
 user_database = config.user_database
 admin_id = config.admin_id
-db_file = "bot.db"
+db_file = config.db_file
+full_log = config.full_log
 # users = {}
 # exercises = {}
 test_mode = True
@@ -50,25 +51,27 @@ def reload(message):
         admin_bot.send_message(message.from_user.id, "Successfully reloaded")
     else:
         admin_bot.send_message(message.from_user.id, "You don't have admin rights" + message.from_user.id)
-        print(message.from_user.id)
+        if full_log:
+            print(message.from_user.id)
 
 
 def merge_libraries(new_json):
-    print("loading file...")
+    if full_log:
+        print("loading file...")
     # global users
     admin_users = {}
     empty_ar = []
     plans_to_update = []
     read_users_from_database(db_file, admin_users)
     admin_users.update(empty_ar)
-    print(admin_users)  # admin_users == users
     with open(new_json, "r") as read_file:
         encoded_users = json.load(read_file)
     for lib in encoded_users:
         user_id = int(lib["id"])
-        print("Processing" + str(user_id))
+        if full_log:
+            print("Processing" + str(user_id))
+
         if user_id in admin_users.keys():
-            print("ongoing")
             user = admin_users[user_id]
             all_new = False
             for t in range(int(lib["trainings"])):
@@ -90,7 +93,8 @@ def merge_libraries(new_json):
                         ex_id = exercise.id
                         plans_to_update.append((user_id, t, e, ex_id, _temp, _repeat, True))
     for plan in plans_to_update:
-        print(plan)
+        if full_log:
+            print(plan)
         update_current_plan(db_file, plan)
 
 
@@ -127,7 +131,6 @@ def send_data(message):
         doc.close()
     else:
         admin_bot.send_message(message.from_user.id, "You don't have admin rights" + str(message.from_user.id))
-        print(message.from_user.id)
 
 
 @admin_bot.message_handler(content_types=['document'])
@@ -136,10 +139,11 @@ def get_document_messages(message):
     if test_mode:
         pass
     else:
-        print(message.from_user.id)
-        print(message.document.file_id)
         file_info = admin_bot.get_file(message.document.file_id)
-        print(file_info)
+        if full_log:
+            print(message.from_user.id)
+            print(message.document.file_id)
+            print(file_info)
         downloaded_file = admin_bot.download_file(file_info.file_path)
         src = 'uploaded_database.json'
         with open(src, 'wb') as new_file:
@@ -201,7 +205,7 @@ def get_link(message):
 @bot.message_handler(commands=['start'])
 def send_hello(message):
     user_id = message.from_user.id
-    print(type(user_id))
+
     user = get_user_from_database(db_file, user_id)  # users[user_id]
 
     update_user(db_file, user)
@@ -251,11 +255,7 @@ def send_hello(message):
         bot.send_message(user_id, talking.ask_start)
         return
     if user.finished():
-        print(user.trainings)
-        print(" < ")
-        print(user.current_training)
         bot.send_message(user_id, talking.last_train)
-        print(user.last_message_id, " is correct")
         return
     pre_training = "Тренировка номер " + str(user.current_training+1) + talking.start_train
     keyboard = telebot.types.InlineKeyboardMarkup()
@@ -273,7 +273,8 @@ def next_exercise(call):
     user_id = call.from_user.id
     user = get_user_from_database(db_file, user_id)
 
-    print(user_id, user.status)
+    if full_log:
+        print(user_id, user.status)
     user.status = "Training"
     user.check_time = time.time() + config.FIFTEEN
 
@@ -386,12 +387,15 @@ def how_are_you():
 
     while True:
         time.sleep(30)  # 15*60+
-        print("Scanning... (Data download)")
+        if full_log:
+            print("Scanning... (Data download)")
         read_users_from_database(db_file, users)
         read_plans_from_database(db_file, users, exercises, False)
-        print("Scanning... (Start)")
+        if full_log:
+            print("Scanning... (Start)")
         for user_id in users:
-            print(user_id, users[user_id].status)
+            if full_log:
+                print(user_id, users[user_id].status)
             user = users[user_id]
             if user.status == "Waiting" or user.check_time == -1:
                 if len(user.trainings) > 0:
@@ -440,8 +444,10 @@ def how_are_you():
                     user.let_go()
                 update_user(db_file, user)
             else:
-                print(show_time(user.check_time), " >= ", show_time(time.time()))
-        print("Scanning... (Finished)")
+                if full_log:
+                    print(show_time(user.check_time), " >= ", show_time(time.time()))
+        if full_log:
+            print("Scanning... (Finished)")
 
 
 def show_time(fl_time):
@@ -454,7 +460,8 @@ def show_time(fl_time):
 
 
 if __name__ == "__main__":
-    print(show_time(time.time()))
+    if full_log:
+        print(show_time(time.time()))
     admin_polling = multiprocessing.Process(target=admin_bot.polling)
     admin_polling.start()
 
